@@ -1,0 +1,307 @@
+/* Restrained, Utility-First Desktop Application Theme */
+:root {
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --border-input: #cbd5e1;
+  --primary-accent: #0f172a;
+  --primary-blue: #2563eb;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Disable ALL animations and transitions throughout the website */
+*, *::before, *::after {
+  animation: none !important;
+  transition: none !important;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-app) !important;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typography */
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Flat Clean Navigation */
+.app-header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+.app-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: -1px; /* Align active border with header bottom border */
+}
+
+.app-nav-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-nav-tab:hover {
+  color: var(--text-main);
+}
+
+.app-nav-tab.active {
+  color: var(--text-main);
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary-accent);
+}
+
+/* Standard Panels & Toolbars (Restrained borders, no heavy shadows or cards) */
+.app-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Clean Tables */
+.table {
+  font-size: 0.825rem;
+  margin-bottom: 0;
+  color: var(--text-main);
+}
+
+.table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border-subtle);
+  border-top: none;
+  padding: 0.6rem 0.75rem;
+  white-space: nowrap;
+}
+
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.55rem 0.75rem;
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.table-selected-row {
+  background-color: #f1f5f9 !important;
+}
+
+/* Form inputs & buttons */
+.form-control-sm, .form-select-sm {
+  font-size: 0.8125rem;
+  border-color: var(--border-input);
+  border-radius: 4px;
+}
+
+.form-control-sm:focus, .form-select-sm:focus {
+  border-color: var(--primary-accent);
+  box-shadow: none;
+}
+
+.btn-sm {
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.btn-dark {
+  background-color: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.btn-dark:hover {
+  background-color: #1e293b;
+  border-color: #1e293b;
+}
+
+.btn-outline-secondary {
+  border-color: var(--border-input);
+  color: #334155;
+  background-color: var(--bg-surface);
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Compact Constraint Selector */
+.constraint-select {
+  font-size: 0.75rem;
+  padding: 0.2rem 1.6rem 0.2rem 0.5rem;
+  border-radius: 3px;
+  width: auto;
+  min-width: 105px;
+  display: inline-block;
+  font-weight: 500;
+}
+
+.constraint-select.state-mandatory {
+  border-color: #86efac;
+  background-color: #f0fdf4;
+  color: #166534;
+}
+
+.constraint-select.state-optional {
+  border-color: #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+}
+
+.constraint-select.state-excluded {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+/* Benchmark Result Bars */
+.benchmark-bar-track {
+  height: 20px;
+  background-color: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+
+.benchmark-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Tree Visualizer Viewport */
+.tree-viewport {
+  width: 100%;
+  overflow-x: auto;
+  padding: 1rem 0;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  text-align: center;
+  min-height: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Canvas Viewport */
+.canvas-container {
+  width: 100%;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.65rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.canvas-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+/* Hash Map Grid */
+.hash-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.4rem;
+}
+
+.hash-map-entry {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-size: 0.78rem;
+}
+
+.hash-key {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  margin-right: 0.3rem;
+}
+
+.hash-arrow {
+  color: #94a3b8;
+  margin: 0 0.3rem;
+  font-size: 0.8rem;
+}
+
+.hash-value {
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
