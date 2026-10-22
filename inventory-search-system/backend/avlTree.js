@@ -265,7 +265,7 @@ class AVLTree {
 
   /**
    * Pure pointer search (O(log n)) without diagnostic allocations (path/toItem).
-   * Used for high-throughput lookups and benchmarking.
+   * Used for high-throughput lookups.
    */
   findNode(id) {
     id = Number(id);

@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { solveKnapsack } from '../knapsack';
 
-export default function TruckLoadingPage({ items = [], isBackendConnected = false }) {
+export default function TruckLoadingPage({ items = [] }) {
   const [capacity, setCapacity] = useState(15);
   const [capacityInput, setCapacityInput] = useState('15');
   const [candidateFilter, setCandidateFilter] = useState('');
   const [poolLimit, setPoolLimit] = useState(25);
-  // Constraints map: { [itemId]: 'mandatory' | 'optional' | 'excluded' }
-  const [constraints, setConstraints] = useState({});
   const [optimizationResult, setOptimizationResult] = useState(null);
   const [showManifest, setShowManifest] = useState(false);
   const [showDpTable, setShowDpTable] = useState(false);
@@ -36,17 +34,17 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
     );
   }, [candidatePool, candidateFilter]);
 
-  // Optimization execution
+  // Optimization execution using standard 0/1 Knapsack
   const runOptimization = (capVal = capacity) => {
     const validCap = Math.max(1, Number(capVal) || 1);
-    const result = solveKnapsack(candidatePool, validCap, constraints);
+    const result = solveKnapsack(candidatePool, validCap);
     setOptimizationResult(result);
   };
 
-  // Re-run optimization on constraint or pool change
+  // Re-run optimization on pool or capacity change
   useEffect(() => {
     runOptimization(capacity);
-  }, [candidatePool, capacity, constraints]);
+  }, [candidatePool, capacity]);
 
   const handleCapacityChange = (e) => {
     const raw = e.target.value;
@@ -63,32 +61,17 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
     setCapacityInput(String(num));
   };
 
-  const handleConstraintChange = (id, state) => {
-    setConstraints(prev => {
-      if (state === 'optional') {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      }
-      return { ...prev, [id]: state };
-    });
-  };
-
-  const handleResetConstraints = () => {
-    setConstraints({});
-  };
-
-  const getItemState = (id) => {
-    return constraints[id] || 'optional';
-  };
-
-  const weightPercent = optimizationResult && optimizationResult.isFeasible && capacity > 0
+  const weightPercent = optimizationResult && capacity > 0
     ? Math.min(100, Math.round((optimizationResult.totalWeight / capacity) * 100))
     : 0;
 
+  const remainingCapacity = optimizationResult
+    ? Math.max(0, capacity - optimizationResult.totalWeight)
+    : capacity;
+
   return (
     <div className="pb-4">
-      {/* A. Page Toolbar: Title, Capacity Input, Optimize Button, Reset Action */}
+      {/* A. Page Toolbar: Title, Capacity Input, Optimize Button */}
       <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-2 border-bottom">
         <h1 className="h6 fw-bold text-dark mb-0">Truck Loading</h1>
 
@@ -120,47 +103,19 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
           >
             Optimize Load
           </button>
-
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            onClick={handleResetConstraints}
-            title="Reset all item requirements to Optional"
-          >
-            Reset Constraints
-          </button>
         </div>
       </div>
 
-      {/* Validation Message: Infeasible State */}
-      {optimizationResult && !optimizationResult.isFeasible && (
-        <div className="alert alert-danger py-2 px-3 small mb-3 d-flex align-items-center justify-content-between" role="alert">
-          <div>
-            <strong>Infeasible cargo:</strong> Mandatory items require{' '}
-            <strong>{optimizationResult.mandatoryWeight} kg</strong>, which exceeds the truck capacity of{' '}
-            <strong>{capacity} kg</strong>.
-          </div>
-          <button
-            type="button"
-            className="btn btn-xs btn-outline-danger py-0 px-2"
-            style={{ fontSize: '0.75rem' }}
-            onClick={handleResetConstraints}
-          >
-            Clear Constraints
-          </button>
-        </div>
-      )}
-
       {/* B. Result Summary: Single compact horizontal row */}
-      {optimizationResult && optimizationResult.isFeasible && (
+      {optimizationResult && (
         <div className="bg-white border rounded p-2.5 mb-3">
           <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 small">
             <div>
               <span className="text-secondary">Loaded items: </span>
-              <strong className="text-dark font-mono">{optimizationResult.selectedItems.length}</strong>
-              <span className="text-muted ms-1">
-                ({optimizationResult.mandatoryItems.length} mandatory, {optimizationResult.selectedOptionalItems.length} optimal)
-              </span>
+              <strong className="text-dark font-mono">
+                {optimizationResult.selectedItems.length}
+              </strong>
+              <span className="text-secondary"> of {candidatePool.length}</span>
             </div>
 
             <div>
@@ -176,7 +131,7 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
 
             <div>
               <span className="text-secondary">Remaining capacity: </span>
-              <strong className="text-dark font-mono">{optimizationResult.remainingCapacity} kg</strong>
+              <strong className="text-dark font-mono">{remainingCapacity} kg</strong>
             </div>
           </div>
 
@@ -251,12 +206,11 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
                 <th>Product</th>
                 <th style={{ width: '100px' }} className="text-end">Weight</th>
                 <th style={{ width: '130px' }} className="text-end">Value (₹)</th>
-                <th style={{ width: '140px' }} className="text-center">Requirement</th>
+                <th style={{ width: '110px' }} className="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               {visibleCandidates.map((item) => {
-                const state = getItemState(item.id);
                 const isSelected = optimizationResult?.selectedIds?.includes(item.id);
 
                 return (
@@ -268,11 +222,6 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
                       <span className={`fw-medium ${isSelected ? 'text-dark' : 'text-secondary'}`}>
                         {item.name}
                       </span>
-                      {isSelected && (
-                        <span className="text-success ms-2" title="Selected on truck" style={{ fontSize: '0.75rem' }}>
-                          Loaded
-                        </span>
-                      )}
                     </td>
                     <td className="text-end font-mono">
                       {item.weight} kg
@@ -281,17 +230,16 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
                       ₹{item.price.toLocaleString()}
                     </td>
                     <td className="text-center">
-                      {/* D. Constraint Dropdown Control */}
-                      <select
-                        className={`form-select form-select-sm constraint-select state-${state}`}
-                        value={state}
-                        onChange={(e) => handleConstraintChange(item.id, e.target.value)}
-                        aria-label={`Constraint state for item ${item.name}`}
-                      >
-                        <option value="optional">Optional</option>
-                        <option value="mandatory">Mandatory</option>
-                        <option value="excluded">Excluded</option>
-                      </select>
+                      {/* In or Out checkmark status */}
+                      {isSelected ? (
+                        <span className="status-pill status-in">
+                          ✓ In
+                        </span>
+                      ) : (
+                        <span className="status-pill status-out">
+                          Out
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -301,8 +249,8 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
         </div>
       </div>
 
-      {/* E. Cargo Manifest: Compact Result Line + Expandable Details */}
-      {optimizationResult && optimizationResult.isFeasible && (
+      {/* D. Cargo Manifest: Compact Result Line + Expandable Details */}
+      {optimizationResult && (
         <div className="app-panel p-2.5 mb-3 bg-white">
           <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div className="text-secondary small">
@@ -324,45 +272,44 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
 
           {showManifest && (
             <div className="mt-2.5 pt-2 border-top">
-              <div className="table-responsive" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                <table className="table table-sm table-hover align-middle mb-0" style={{ fontSize: '0.78rem' }}>
-                  <thead className="table-light">
-                    <tr>
-                      <th style={{ width: '60px' }}>ID</th>
-                      <th>Loaded Product</th>
-                      <th style={{ width: '90px' }} className="text-end">Weight</th>
-                      <th style={{ width: '120px' }} className="text-end">Value (₹)</th>
-                      <th style={{ width: '100px' }} className="text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {optimizationResult.selectedItems.map((it) => {
-                      const isMandatory = getItemState(it.id) === 'mandatory';
-                      return (
+              {optimizationResult.selectedItems.length === 0 ? (
+                <div className="text-secondary small py-2 text-center">
+                  No items fit within the current capacity ({capacity} kg).
+                </div>
+              ) : (
+                <div className="table-responsive" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                  <table className="table table-sm table-hover align-middle mb-0" style={{ fontSize: '0.78rem' }}>
+                    <thead className="table-light">
+                      <tr>
+                        <th style={{ width: '60px' }}>ID</th>
+                        <th>Loaded Product</th>
+                        <th style={{ width: '90px' }} className="text-end">Weight</th>
+                        <th style={{ width: '120px' }} className="text-end">Value (₹)</th>
+                        <th style={{ width: '80px' }} className="text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {optimizationResult.selectedItems.map((it) => (
                         <tr key={it.id}>
                           <td className="font-mono text-secondary">#{it.id}</td>
                           <td className="fw-medium text-dark">{it.name}</td>
                           <td className="text-end font-mono">{it.weight} kg</td>
                           <td className="text-end font-mono">₹{it.price.toLocaleString()}</td>
                           <td className="text-center">
-                            {isMandatory ? (
-                              <span className="text-success small fw-medium">Mandatory</span>
-                            ) : (
-                              <span className="text-primary small fw-medium">Optimal</span>
-                            )}
+                            <span className="text-success small fw-medium">✓ In</span>
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* F. Technical Optimization Details (DP Matrix - Collapsed by default) */}
+      {/* E. Technical Optimization Details (DP Matrix - Collapsed by default) */}
       <div className="app-panel bg-white">
         <div
           className="d-flex align-items-center justify-content-between p-2.5 cursor-pointer"
@@ -381,16 +328,16 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
           </button>
         </div>
 
-        {showDpTable && optimizationResult?.isFeasible && (
+        {showDpTable && optimizationResult && (
           <div className="p-3 border-top">
             <div className="text-secondary small mb-2">
-              Matrix optimization over <strong>{optimizationResult.optionalItems.length} optional candidates</strong> and{' '}
-              <strong>{optimizationResult.remainingCapacity} kg remaining capacity</strong> (after allocating mandatory cargo).
+              Matrix optimization over <strong>{optimizationResult.candidateItems.length} candidate items</strong> and{' '}
+              <strong>{capacity} kg capacity</strong>.
             </div>
 
-            {optimizationResult.remainingCapacity <= 0 || optimizationResult.optionalItems.length === 0 ? (
+            {optimizationResult.candidateItems.length === 0 ? (
               <div className="text-secondary small p-3 bg-light rounded text-center">
-                Remaining capacity is 0 kg or no optional items available.
+                No candidate items available.
               </div>
             ) : (
               <div className="table-responsive" style={{ maxHeight: '360px' }}>
@@ -400,7 +347,7 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
                       <th style={{ width: '120px' }}>Item</th>
                       <th style={{ width: '50px' }}>Wt</th>
                       <th style={{ width: '70px' }}>Val</th>
-                      {Array.from({ length: Math.min(30, optimizationResult.remainingCapacity + 1) }).map((_, w) => (
+                      {Array.from({ length: Math.min(30, capacity + 1) }).map((_, w) => (
                         <th key={w} style={{ width: '42px' }} className="font-mono">
                           {w}
                         </th>
@@ -412,24 +359,24 @@ export default function TruckLoadingPage({ items = [], isBackendConnected = fals
                       <td className="text-secondary font-mono text-start">Base (0)</td>
                       <td>-</td>
                       <td>-</td>
-                      {Array.from({ length: Math.min(30, optimizationResult.remainingCapacity + 1) }).map((_, w) => (
+                      {Array.from({ length: Math.min(30, capacity + 1) }).map((_, w) => (
                         <td key={w} className="text-muted font-mono">0</td>
                       ))}
                     </tr>
-                    {optimizationResult.optionalItems.slice(0, 15).map((it, idx) => {
+                    {optimizationResult.candidateItems.slice(0, 15).map((it, idx) => {
                       const rowIdx = idx + 1;
-                      const isSelectedOpt = optimizationResult.selectedOptionalItems.some(o => o.id === it.id);
+                      const isSelected = optimizationResult.selectedIds.includes(it.id);
 
                       return (
-                        <tr key={it.id} className={isSelectedOpt ? 'table-selected-row' : ''}>
+                        <tr key={it.id} className={isSelected ? 'table-selected-row' : ''}>
                           <td className="text-start font-mono text-truncate" style={{ maxWidth: '120px' }}>
                             {it.name}
                           </td>
                           <td className="font-mono">{it.weight}</td>
                           <td className="font-mono">₹{it.price}</td>
-                          {Array.from({ length: Math.min(30, optimizationResult.remainingCapacity + 1) }).map((_, w) => {
+                          {Array.from({ length: Math.min(30, capacity + 1) }).map((_, w) => {
                             const val = optimizationResult.dpTable[rowIdx] ? optimizationResult.dpTable[rowIdx][w] : 0;
-                            const isOptimalCell = w === optimizationResult.remainingCapacity && rowIdx === optimizationResult.optionalItems.length;
+                            const isOptimalCell = w === capacity && rowIdx === optimizationResult.candidateItems.length;
                             return (
                               <td
                                 key={w}

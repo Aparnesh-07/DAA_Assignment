@@ -48,9 +48,9 @@ export default function InventoryTable({
 
   const renderSortIndicator = (field) => {
     if (sortField !== field) {
-      return <span className="text-muted ms-1 opacity-25">&uarr;&darr;</span>;
+      return <span className="text-muted ms-1 opacity-25">↕</span>;
     }
-    return <span className="text-dark ms-1">{sortDirection === 'asc' ? '&uarr;' : '&darr;'}</span>;
+    return <span className="text-dark ms-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>;
   };
 
   return (

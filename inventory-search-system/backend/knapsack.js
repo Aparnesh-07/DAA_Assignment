@@ -1,112 +1,36 @@
 /**
- * 0/1 Knapsack Problem Solver with Mandatory and Excluded Cargo Constraints
+ * Standard 0/1 Knapsack Problem Solver using Dynamic Programming
  * 
- * Algorithm: Bottom-up 2D Dynamic Programming over remaining capacity
- * Time Complexity:  O(n_optional * RemainingCapacity)
- * Space Complexity: O(n_optional * RemainingCapacity)
+ * Algorithm: Bottom-up 2D Dynamic Programming
+ * Time Complexity:  O(n * W)
+ * Space Complexity: O(n * W)
+ * where n is the number of candidate items and W is the truck capacity.
  */
 
-function solveKnapsack(items = [], capacity = 15, constraints = {}) {
+function solveKnapsack(items = [], capacity = 15) {
   const startTime = performance.now();
   const W = Math.max(0, Math.floor(Number(capacity) || 0));
   const rawItems = Array.isArray(items) ? items : [];
 
-  // Partition candidate items into Mandatory (M), Optional (O), and Excluded (E)
-  const mandatoryItems = [];
-  const optionalItems = [];
-  const excludedItems = [];
+  const candidateItems = rawItems.map(item => ({
+    ...item,
+    id: Number(item.id),
+    weight: Math.max(1, Math.floor(Number(item.weight) || 1)),
+    price: Math.max(0, Number(item.price) || 0)
+  }));
 
-  for (const item of rawItems) {
-    const id = item.id;
-    // Determine state from constraints map or item property; default is 'optional'
-    const state = (constraints[id] || item.requirement || item.constraint || 'optional').toLowerCase();
-    const normalizedItem = {
-      ...item,
-      id: Number(item.id),
-      weight: Math.max(1, Math.floor(Number(item.weight) || 1)),
-      price: Math.max(0, Number(item.price) || 0)
-    };
+  const n = candidateItems.length;
 
-    if (state === 'mandatory') {
-      mandatoryItems.push(normalizedItem);
-    } else if (state === 'excluded') {
-      excludedItems.push(normalizedItem);
-    } else {
-      optionalItems.push(normalizedItem);
-    }
-  }
+  // dp[i][w] stores maximum value achievable using a subset of the first i items with capacity w
+  const dp = Array.from({ length: n + 1 }, () => new Array(W + 1).fill(0));
 
-  const mandatoryWeight = mandatoryItems.reduce((sum, it) => sum + it.weight, 0);
-  const mandatoryValue = mandatoryItems.reduce((sum, it) => sum + it.price, 0);
-
-  // Infeasibility check: mandatory items exceed total truck capacity
-  if (mandatoryWeight > W) {
-    const timeTakenMs = Number((performance.now() - startTime).toFixed(4));
-    const decisions = {};
-
-    mandatoryItems.forEach(it => {
-      decisions[it.id] = {
-        status: 'infeasible_mandatory',
-        badge: 'Infeasible',
-        reason: `Mandatory item cannot be accommodated; total mandatory weight (${mandatoryWeight} kg) exceeds capacity (${W} kg).`
-      };
-    });
-
-    optionalItems.forEach(it => {
-      decisions[it.id] = {
-        status: 'not_evaluated',
-        badge: 'Not Evaluated',
-        reason: 'Optimization aborted due to infeasible mandatory cargo constraints.'
-      };
-    });
-
-    excludedItems.forEach(it => {
-      decisions[it.id] = {
-        status: 'excluded_user',
-        badge: 'Excluded',
-        reason: 'Excluded by user directive.'
-      };
-    });
-
-    return {
-      capacity: W,
-      isFeasible: false,
-      infeasibilityReason: `Mandatory cargo weight (${mandatoryWeight} kg) exceeds total truck capacity (${W} kg). Reduce mandatory constraints or increase capacity.`,
-      mandatoryWeight,
-      mandatoryValue,
-      mandatoryItems,
-      remainingCapacity: W - mandatoryWeight,
-      optionalWeight: 0,
-      optionalValue: 0,
-      selectedOptionalItems: [],
-      totalWeight: mandatoryWeight,
-      maxValue: 0,
-      selectedItems: [],
-      selectedIds: [],
-      excludedItems,
-      optionalItems,
-      dpTable: [[0]],
-      dpRowItems: [],
-      timeTakenMs,
-      itemCount: rawItems.length,
-      decisions
-    };
-  }
-
-  // Feasible problem: optimize Optional items over remaining capacity
-  const remainingCapacity = W - mandatoryWeight;
-  const nOpt = optionalItems.length;
-
-  // dp[i][w] stores maximum value achievable with first i optional items and capacity w
-  const dp = Array.from({ length: nOpt + 1 }, () => new Array(remainingCapacity + 1).fill(0));
-
-  if (nOpt > 0 && remainingCapacity > 0) {
-    for (let i = 1; i <= nOpt; i++) {
-      const it = optionalItems[i - 1];
+  if (n > 0 && W > 0) {
+    for (let i = 1; i <= n; i++) {
+      const it = candidateItems[i - 1];
       const wt = it.weight;
       const val = it.price;
 
-      for (let w = 0; w <= remainingCapacity; w++) {
+      for (let w = 0; w <= W; w++) {
         if (wt <= w) {
           dp[i][w] = Math.max(dp[i - 1][w], dp[i - 1][w - wt] + val);
         } else {
@@ -116,97 +40,38 @@ function solveKnapsack(items = [], capacity = 15, constraints = {}) {
     }
   }
 
-  // Backtracking over DP table to find selected optional items
-  const selectedOptionalItems = [];
-  const selectedOptionalIds = new Set();
-  let currentW = remainingCapacity;
+  // Backtracking over DP table to find the optimal selected items (In or Out)
+  const selectedItems = [];
+  const selectedIds = new Set();
+  let currentW = W;
 
-  if (nOpt > 0 && remainingCapacity > 0) {
-    for (let i = nOpt; i > 0; i--) {
+  if (n > 0 && W > 0) {
+    for (let i = n; i > 0; i--) {
       if (dp[i][currentW] !== dp[i - 1][currentW]) {
-        const item = optionalItems[i - 1];
-        selectedOptionalItems.push(item);
-        selectedOptionalIds.add(item.id);
+        const item = candidateItems[i - 1];
+        selectedItems.push(item);
+        selectedIds.add(item.id);
         currentW -= item.weight;
       }
     }
-    selectedOptionalItems.reverse();
+    selectedItems.reverse();
   }
 
-  const selectedOptionalWeight = selectedOptionalItems.reduce((sum, it) => sum + it.weight, 0);
-  const selectedOptionalValue = selectedOptionalItems.reduce((sum, it) => sum + it.price, 0);
-
-  // Combine Mandatory items and Selected Optional items
-  const finalCargo = [...mandatoryItems, ...selectedOptionalItems];
-  const finalWeight = mandatoryWeight + selectedOptionalWeight;
-  const finalValue = mandatoryValue + selectedOptionalValue;
-  const selectedIds = finalCargo.map(it => it.id);
-
-  // Build decision reasons for each candidate
-  const decisions = {};
-
-  mandatoryItems.forEach(it => {
-    decisions[it.id] = {
-      status: 'included_mandatory',
-      badge: 'Mandatory',
-      reason: 'Included automatically based on mandatory delivery requirement.'
-    };
-  });
-
-  optionalItems.forEach(it => {
-    if (selectedOptionalIds.has(it.id)) {
-      decisions[it.id] = {
-        status: 'included_optimal',
-        badge: 'Optimized',
-        reason: 'Selected by 0/1 Knapsack optimizer to maximize cargo value.'
-      };
-    } else if (it.weight > remainingCapacity) {
-      decisions[it.id] = {
-        status: 'not_selected_capacity',
-        badge: 'Oversized',
-        reason: `Item weight (${it.weight} kg) exceeds remaining capacity (${remainingCapacity} kg).`
-      };
-    } else {
-      decisions[it.id] = {
-        status: 'not_selected_tradeoff',
-        badge: 'Unselected',
-        reason: 'Not selected: an alternative combination provided higher commercial value for the available capacity.'
-      };
-    }
-  });
-
-  excludedItems.forEach(it => {
-    decisions[it.id] = {
-      status: 'excluded_user',
-      badge: 'Excluded',
-      reason: 'Excluded by user directive.'
-    };
-  });
-
+  const totalWeight = selectedItems.reduce((sum, it) => sum + it.weight, 0);
+  const maxValue = selectedItems.reduce((sum, it) => sum + it.price, 0);
   const timeTakenMs = Number((performance.now() - startTime).toFixed(4));
 
   return {
     capacity: W,
-    isFeasible: true,
-    infeasibilityReason: null,
-    mandatoryWeight,
-    mandatoryValue,
-    mandatoryItems,
-    remainingCapacity,
-    optionalWeight: selectedOptionalWeight,
-    optionalValue: selectedOptionalValue,
-    selectedOptionalItems,
-    totalWeight: finalWeight,
-    maxValue: finalValue,
-    selectedItems: finalCargo,
-    selectedIds,
-    excludedItems,
-    optionalItems,
+    totalWeight,
+    maxValue,
+    selectedItems,
+    selectedIds: Array.from(selectedIds),
+    candidateItems,
     dpTable: dp,
-    dpRowItems: optionalItems,
+    dpRowItems: candidateItems,
     timeTakenMs,
-    itemCount: rawItems.length,
-    decisions
+    itemCount: n
   };
 }
 

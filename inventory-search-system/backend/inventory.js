@@ -4,7 +4,6 @@ class InventoryManager {
   constructor() {
     this.avlTree = new AVLTree();
     this.inventoryMap = new Map();
-    this.itemsArray = [];
     this.seedInitialData();
   }
 
@@ -27,12 +26,10 @@ class InventoryManager {
 
     this.avlTree = new AVLTree();
     this.inventoryMap.clear();
-    this.itemsArray = [];
 
     sampleItems.forEach(item => {
       this.avlTree.insert(item);
       this.inventoryMap.set(item.id, { ...item });
-      this.itemsArray.push({ ...item });
     });
   }
 
@@ -53,91 +50,36 @@ class InventoryManager {
   search(id) {
     const numId = Number(id);
 
-    let avlTimeNs = 0;
-    let mapTimeNs = 0;
-    let linTimeNs = 0;
+    // 1. AVL Tree Search (tracks path, comparisons, and balance factor)
+    const a0 = performance.now();
+    const avlResult = this.avlTree.search(numId);
+    const avlTimeMs = Number((performance.now() - a0).toFixed(4));
 
-    let avlResult;
-    let mapFound = false;
-    let mapItem = null;
-    let linearIdx = -1;
-    const totalCount = this.itemsArray.length;
-
-    if (typeof process !== 'undefined' && process.hrtime && process.hrtime.bigint) {
-      // 1. AVL Tree Search (tracks path, comparisons, and balance factor)
-      const a0 = process.hrtime.bigint();
-      avlResult = this.avlTree.search(numId);
-      const a1 = process.hrtime.bigint();
-      avlTimeNs = Number(a1 - a0);
-
-      // 2. Hash Map Direct Lookup
-      const m0 = process.hrtime.bigint();
-      mapFound = this.inventoryMap.has(numId);
-      mapItem = mapFound ? this.inventoryMap.get(numId) : null;
-      const m1 = process.hrtime.bigint();
-      mapTimeNs = Number(m1 - m0);
-
-      // 3. Pure linear search on maintained array
-      const l0 = process.hrtime.bigint();
-      linearIdx = this.itemsArray.findIndex(i => i.id === numId);
-      const l1 = process.hrtime.bigint();
-      linTimeNs = Number(l1 - l0);
-    } else {
-      const a0 = performance.now();
-      avlResult = this.avlTree.search(numId);
-      avlTimeNs = (performance.now() - a0) * 1e6;
-
-      const m0 = performance.now();
-      mapFound = this.inventoryMap.has(numId);
-      mapItem = mapFound ? this.inventoryMap.get(numId) : null;
-      mapTimeNs = (performance.now() - m0) * 1e6;
-
-      const l0 = performance.now();
-      linearIdx = this.itemsArray.findIndex(i => i.id === numId);
-      linTimeNs = (performance.now() - l0) * 1e6;
-    }
-
-    const linearComparisons = linearIdx !== -1 ? linearIdx + 1 : totalCount;
-
-    const avlTimeUs = Number((avlTimeNs / 1000).toFixed(2));
-    const avlTimeMs = Number((avlTimeNs / 1e6).toFixed(4));
-
-    const mapTimeUs = Number((mapTimeNs / 1000).toFixed(2));
-    const mapTimeMs = Number((mapTimeNs / 1e6).toFixed(4));
-
-    const linTimeUs = Number((linTimeNs / 1000).toFixed(2));
-    const linTimeMs = Number((linTimeNs / 1e6).toFixed(4));
+    // 2. Hash Map Direct Lookup
+    const m0 = performance.now();
+    const mapFound = this.inventoryMap.has(numId);
+    const mapItem = mapFound ? this.inventoryMap.get(numId) : null;
+    const mapTimeMs = Number((performance.now() - m0).toFixed(4));
 
     return {
       id: numId,
       found: avlResult.found,
       item: avlResult.item,
-      totalItemsInSystem: totalCount,
+      totalItemsInSystem: this.inventoryMap.size,
       avl: {
         comparisons: avlResult.comparisons,
         path: avlResult.path,
         nodeHeight: avlResult.nodeHeight,
         balanceFactor: avlResult.balanceFactor,
         timeComplexity: 'O(log n)',
-        timeTakenMs: avlTimeMs,
-        timeTakenUs: avlTimeUs,
-        timeTakenNs: avlTimeNs
-      },
-      linearSearch: {
-        comparisons: linearComparisons,
-        timeComplexity: 'O(n)',
-        timeTakenMs: linTimeMs,
-        timeTakenUs: linTimeUs,
-        timeTakenNs: linTimeNs
+        timeTakenMs: avlTimeMs
       },
       hashMap: {
         found: mapFound,
         item: mapItem,
         lookupOperations: 1,
         timeComplexity: 'O(1) average',
-        timeTakenMs: mapTimeMs,
-        timeTakenUs: mapTimeUs,
-        timeTakenNs: mapTimeNs
+        timeTakenMs: mapTimeMs
       }
     };
   }
@@ -178,51 +120,26 @@ class InventoryManager {
       weight
     };
 
-    let avlTimeNs = 0;
-    let mapTimeNs = 0;
+    const a0 = performance.now();
+    this.avlTree.insert(newItem);
+    const avlTimeMs = Number((performance.now() - a0).toFixed(4));
 
-    if (typeof process !== 'undefined' && process.hrtime && process.hrtime.bigint) {
-      const a0 = process.hrtime.bigint();
-      this.avlTree.insert(newItem);
-      const a1 = process.hrtime.bigint();
-      avlTimeNs = Number(a1 - a0);
-
-      const m0 = process.hrtime.bigint();
-      this.inventoryMap.set(id, { ...newItem });
-      const m1 = process.hrtime.bigint();
-      mapTimeNs = Number(m1 - m0);
-    } else {
-      const a0 = performance.now();
-      this.avlTree.insert(newItem);
-      avlTimeNs = (performance.now() - a0) * 1e6;
-
-      const m0 = performance.now();
-      this.inventoryMap.set(id, { ...newItem });
-      mapTimeNs = (performance.now() - m0) * 1e6;
-    }
-
-    this.itemsArray.push({ ...newItem });
-
-    const avlTimeUs = Number((avlTimeNs / 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeNs / 1000).toFixed(2));
-    const avlTimeMs = Number((avlTimeNs / 1e6).toFixed(4));
-    const mapTimeMs = Number((mapTimeNs / 1e6).toFixed(4));
+    const m0 = performance.now();
+    this.inventoryMap.set(id, { ...newItem });
+    const mapTimeMs = Number((performance.now() - m0).toFixed(4));
 
     return {
       ...newItem,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
 
   /**
-   * Update an existing inventory item with execution timers
+   * Update an existing inventory item
    */
   update(id, updateData) {
     const numId = Number(id);
@@ -253,54 +170,26 @@ class InventoryManager {
       weight
     };
 
-    let avlTimeNs = 0;
-    let mapTimeNs = 0;
+    const a0 = performance.now();
+    this.avlTree.update(numId, updatedItem);
+    const avlTimeMs = Number((performance.now() - a0).toFixed(4));
 
-    if (typeof process !== 'undefined' && process.hrtime && process.hrtime.bigint) {
-      const a0 = process.hrtime.bigint();
-      this.avlTree.update(numId, updatedItem);
-      const a1 = process.hrtime.bigint();
-      avlTimeNs = Number(a1 - a0);
-
-      const m0 = process.hrtime.bigint();
-      this.inventoryMap.set(numId, updatedItem);
-      const m1 = process.hrtime.bigint();
-      mapTimeNs = Number(m1 - m0);
-    } else {
-      const a0 = performance.now();
-      this.avlTree.update(numId, updatedItem);
-      avlTimeNs = (performance.now() - a0) * 1e6;
-
-      const m0 = performance.now();
-      this.inventoryMap.set(numId, updatedItem);
-      mapTimeNs = (performance.now() - m0) * 1e6;
-    }
-
-    const idx = this.itemsArray.findIndex(i => i.id === numId);
-    if (idx !== -1) {
-      this.itemsArray[idx] = { ...updatedItem };
-    }
-
-    const avlTimeUs = Number((avlTimeNs / 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeNs / 1000).toFixed(2));
-    const avlTimeMs = Number((avlTimeNs / 1e6).toFixed(4));
-    const mapTimeMs = Number((mapTimeNs / 1e6).toFixed(4));
+    const m0 = performance.now();
+    this.inventoryMap.set(numId, updatedItem);
+    const mapTimeMs = Number((performance.now() - m0).toFixed(4));
 
     return {
       ...updatedItem,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
 
   /**
-   * Delete an item by ID with execution timers
+   * Delete an item by ID
    */
   delete(id) {
     const numId = Number(id);
@@ -311,54 +200,26 @@ class InventoryManager {
 
     const itemToDelete = this.inventoryMap.get(numId);
 
-    let avlTimeNs = 0;
-    let mapTimeNs = 0;
+    const a0 = performance.now();
+    this.avlTree.delete(numId);
+    const avlTimeMs = Number((performance.now() - a0).toFixed(4));
 
-    if (typeof process !== 'undefined' && process.hrtime && process.hrtime.bigint) {
-      const a0 = process.hrtime.bigint();
-      this.avlTree.delete(numId);
-      const a1 = process.hrtime.bigint();
-      avlTimeNs = Number(a1 - a0);
-
-      const m0 = process.hrtime.bigint();
-      this.inventoryMap.delete(numId);
-      const m1 = process.hrtime.bigint();
-      mapTimeNs = Number(m1 - m0);
-    } else {
-      const a0 = performance.now();
-      this.avlTree.delete(numId);
-      avlTimeNs = (performance.now() - a0) * 1e6;
-
-      const m0 = performance.now();
-      this.inventoryMap.delete(numId);
-      mapTimeNs = (performance.now() - m0) * 1e6;
-    }
-
-    const idx = this.itemsArray.findIndex(i => i.id === numId);
-    if (idx !== -1) {
-      this.itemsArray.splice(idx, 1);
-    }
-
-    const avlTimeUs = Number((avlTimeNs / 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeNs / 1000).toFixed(2));
-    const avlTimeMs = Number((avlTimeNs / 1e6).toFixed(4));
-    const mapTimeMs = Number((mapTimeNs / 1e6).toFixed(4));
+    const m0 = performance.now();
+    this.inventoryMap.delete(numId);
+    const mapTimeMs = Number((performance.now() - m0).toFixed(4));
 
     return {
       ...itemToDelete,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
 
   /**
-   * Loads a large dataset (e.g. 200 or 1,500 items) to demonstrate scalable O(log n) vs O(1) performance
+   * Loads a large dataset (e.g. 200 or 1,500 items)
    */
   loadLargeData(count = 200) {
     const startTime = performance.now();
@@ -368,7 +229,6 @@ class InventoryManager {
 
     this.avlTree = new AVLTree();
     this.inventoryMap.clear();
-    this.itemsArray = [];
 
     const ids = [];
     for (let i = 1; i <= count; i++) {
@@ -395,7 +255,6 @@ class InventoryManager {
 
       this.avlTree.insert(item);
       this.inventoryMap.set(id, { ...item });
-      this.itemsArray.push({ ...item });
     });
 
     const timeTakenMs = Number((performance.now() - startTime).toFixed(2));

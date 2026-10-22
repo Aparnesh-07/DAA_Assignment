@@ -3,7 +3,6 @@ const cors = require('cors');
 const path = require('path');
 const inventory = require('./inventory');
 const { solveKnapsack } = require('./knapsack');
-const { runSearchBenchmark } = require('./benchmark');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -146,16 +145,15 @@ app.post('/api/inventory/demo-large-data', (req, res) => {
   }
 });
 
-// 9. POST /api/inventory/knapsack - 0/1 Knapsack Truck Loading calculation with constraints
+// 9. POST /api/inventory/knapsack - 0/1 Knapsack Truck Loading calculation
 app.post('/api/inventory/knapsack', (req, res) => {
   try {
     const capacity = req.body.capacity !== undefined ? Number(req.body.capacity) : 15;
     const items = req.body.items || inventory.getAll();
-    const constraints = req.body.constraints || {};
-    const result = solveKnapsack(items, capacity, constraints);
+    const result = solveKnapsack(items, capacity);
     res.json({
       success: true,
-      message: result.isFeasible ? 'Optimal truck loading computed via 0/1 Knapsack DP' : result.infeasibilityReason,
+      message: 'Optimal truck loading computed via 0/1 Knapsack DP',
       data: result
     });
   } catch (error) {
@@ -163,21 +161,7 @@ app.post('/api/inventory/knapsack', (req, res) => {
   }
 });
 
-// 10. POST /api/inventory/benchmark - Run empirical search benchmark on isolated dataset
-app.post('/api/inventory/benchmark', (req, res) => {
-  try {
-    const result = runSearchBenchmark(req.body);
-    res.json({
-      success: true,
-      message: 'Benchmark completed successfully',
-      data: result
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// 11. GET /api/inventory/range - AVL Tree Range Query
+// 10. GET /api/inventory/range - AVL Tree Range Query
 app.get('/api/inventory/range', (req, res) => {
   try {
     const { minId, maxId } = req.query;

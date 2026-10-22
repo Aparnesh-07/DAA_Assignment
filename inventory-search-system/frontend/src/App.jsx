@@ -199,29 +199,6 @@ export default function App() {
     return clientInventory.rangeSearch(minId, maxId);
   }, []);
 
-  // Run Empirical Benchmark
-  const handleRunBenchmark = async (benchmarkConfig) => {
-    if (isBackendConnected) {
-      try {
-        const res = await fetch(`${API_BASE}/benchmark`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(benchmarkConfig)
-        });
-        const json = await res.json();
-        if (res.ok && json.success) {
-          return json.data;
-        }
-      } catch (err) {
-        console.warn('Backend benchmark failed, falling back to client engine', err);
-        setIsBackendConnected(false);
-      }
-    }
-
-    // Client fallback benchmark
-    return clientInventory.runBenchmark(benchmarkConfig);
-  };
-
   // Load dataset (10 items, 200 items, or 1500 items)
   const handleLoadDataset = async (count = 10) => {
     setLoadingDataset(true);
@@ -293,7 +270,6 @@ export default function App() {
         onLoadDataset={handleLoadDataset}
         totalItems={items.length}
         loadingDataset={loadingDataset}
-        isBackendConnected={isBackendConnected}
       />
 
       {/* Main Content Area */}
@@ -311,7 +287,6 @@ export default function App() {
         ) : activePage === 'truck-loading' ? (
           <TruckLoadingPage
             items={items}
-            isBackendConnected={isBackendConnected}
           />
         ) : (
           <VisualizationPage

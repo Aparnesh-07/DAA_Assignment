@@ -15,7 +15,7 @@ export default function Navbar({
     <header className="app-header">
       <div className="container-fluid px-3 px-lg-4">
         <div className="d-flex align-items-center justify-content-between flex-wrap">
-          {/* Flat Navigation Tabs (Benchmarking removed) */}
+          {/* Flat Navigation Tabs */}
           <nav className="app-nav-tabs">
             <button
               type="button"

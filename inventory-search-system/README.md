@@ -1,6 +1,6 @@
 # Nexus Inventory & Optimization System
 
-A production-grade full-stack web application developed for a **Design and Analysis of Algorithms (DAA)** curriculum. It implements, visualizes, and rigorously benchmarks custom in-memory data structures and algorithms—including an **AVL Tree (Self-Balancing Binary Search Tree)**, a **Hash Map (Direct Key Lookup)**, an **Array (Linear Search)**, and a **0/1 Knapsack Dynamic Programming Optimizer with Constraints**—without external database engines.
+A production-grade full-stack web application developed for a **Design and Analysis of Algorithms (DAA)** curriculum. It implements, visualizes, and optimizes custom in-memory data structures and algorithms—including an **AVL Tree (Self-Balancing Binary Search Tree)**, a **Hash Map (Direct Key Lookup)**, and a **0/1 Knapsack Dynamic Programming Optimizer with Constraints**—without external database engines.
 
 ---
 
@@ -14,9 +14,8 @@ A production-grade full-stack web application developed for a **Design and Analy
 - **Backend:**
   - Node.js
   - Express.js REST API
-  - High-Resolution Timers (`process.hrtime.bigint`)
 - **Offline / Resilient Fallback:**
-  - In-browser mirror (`clientStorage.js` & `benchmark.js`) ensuring 100% functionality even when offline or disconnected.
+  - In-browser mirror (`clientStorage.js`) ensuring 100% functionality even when offline or disconnected.
 
 ---
 
@@ -37,16 +36,14 @@ Self-balancing Binary Search Tree keyed by numeric **Product ID**.
 ### 2. Hash Map (`backend/inventory.js` & native `Map`)
 Direct key-value store mapping `Product ID → Inventory Item`.
 - **$O(1)$ average** direct retrieval, insertion, and deletion.
-- Kept in lockstep synchronization with the AVL Tree and Array for all CRUD operations.
+- Kept in lockstep synchronization with the AVL Tree for all CRUD operations.
 
-### 3. Linear Array (`itemsArray`)
-Contiguous memory array maintained in parallel for empirical comparison against $O(\log n)$ and $O(1)$.
-
-### 4. 0/1 Knapsack Optimizer with Delivery Constraints (`backend/knapsack.js` & `frontend/src/knapsack.js`)
-Logistics cargo planning algorithm supporting **Mandatory**, **Optional**, and **Excluded** cargo states:
-- **Feasibility Verification:** Detects if $\sum \text{Weight}(\text{Mandatory}) > \text{Capacity}$, returning clear diagnostic explanations.
-- **Constrained Subproblem:** Optimizes optional items over remaining capacity: $\text{Capacity}_{\text{rem}} = W - W_{\text{mandatory}}$.
-- **2D Dynamic Programming:** Solves subproblem in $O(n_{\text{opt}} \cdot W_{\text{rem}})$ time and space with backtracking.
+### 3. 0/1 Knapsack Optimizer (`backend/knapsack.js` & `frontend/src/knapsack.js`)
+Standard textbook 0/1 Knapsack algorithm using dynamic programming to optimize truck loading:
+- **Objective:** Select a subset of inventory items that maximizes total commercial value without exceeding truck weight capacity $W$.
+- **Decision:** Binary decision for each candidate item: **In (✓)** or **Out**.
+- **2D Dynamic Programming:** Solves recurrence in $O(n \cdot W)$ time and space with backtracking:
+  $$dp[i][w] = \max(dp[i-1][w], dp[i-1][w - w_i] + v_i)$$
 
 ---
 
@@ -69,34 +66,16 @@ Logistics cargo planning algorithm supporting **Mandatory**, **Optional**, and *
 ### 2. Truck Loading (`/truck-loading`)
 - Real-world logistics cargo planning.
 - Configurable truck payload capacity (kg).
-- Candidate item controls with 3-state selector:
-  - **Mandatory:** Guaranteed delivery.
-  - **Optional:** Optimizer includes item if it maximizes total payload value.
-  - **Excluded:** Omitted from cargo.
-- Automatic feasibility check with excess weight reporting.
+- Candidate item list displaying **In (✓)** or **Out** status for each item.
 - Visual payload utilization progress bar.
-- Final Cargo Manifest with decision explanations.
-- Collapsible 2D Dynamic Programming matrix inspection.
+- Final Cargo Manifest displaying loaded items.
+- Collapsible standard 2D Dynamic Programming matrix inspection.
 
-### 3. Benchmarking Laboratory (`/benchmarking`)
-- Dedicated empirical performance analysis workspace.
-- Configurable experiments:
-  - Dataset sizes: 100, 500, 1,000, 5,000, 10,000 items.
-  - Search types: Successful (guaranteed found) vs Unsuccessful (guaranteed missing).
-  - Target positions: Random, First (index 0), Middle (index N/2), Last (index N-1), Custom ID.
-  - Repetitions: 50, 100, 500, 1,000, 2,000 trials.
-- Isolated dataset generation (leaves live warehouse inventory untouched).
-- Statistical metrics table: Median, Mean, Min, Max latencies, and algorithmic work metrics.
-- Bar chart comparing median latencies across AVL Tree, Hash Map, and Linear Search.
-- Factual performance summary and theoretical complexity matrix.
-- Session experiment history table with CSV export.
-
-### 4. Algorithm Details (`/visualization`)
+### 3. Algorithm Details (`/visualization`)
 - Dynamic SVG tree visualization with interactive card inspection.
 - Live display of node Heights ($H$) and Balance Factors ($BF$).
 - Full-dataset Canvas preview for large datasets (200, 1,500 nodes) with pan, zoom, and search path highlight.
 - Hash Map key-value grid.
-- Asymptotic complexity comparison table ($O(\log n)$ vs $O(1)$ vs $O(n)$).
 
 ---
 
@@ -111,7 +90,6 @@ Logistics cargo planning algorithm supporting **Mandatory**, **Optional**, and *
 | `PUT` | `/api/inventory/:id` | Updates item in all data structures |
 | `DELETE`| `/api/inventory/:id` | Deletes item and rebalances AVL Tree |
 | `POST` | `/api/inventory/knapsack` | Solves 0/1 Knapsack with Mandatory/Optional/Excluded constraints |
-| `POST` | `/api/inventory/benchmark` | Runs empirical search benchmark on isolated dataset |
 | `GET` | `/api/inventory/visualization` | Returns tree hierarchy and hash map entries for visual rendering |
 | `POST` | `/api/inventory/reset` | Resets to 10 sample items |
 | `POST` | `/api/inventory/demo-large-data` | Generates 10, 200, or 1,500 items in memory |

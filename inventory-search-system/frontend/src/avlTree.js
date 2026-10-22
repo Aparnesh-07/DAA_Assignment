@@ -185,7 +185,7 @@ export class AVLTree {
 
   /**
    * Pure pointer search (O(log n)) without diagnostic allocations (path/toItem).
-   * Used for high-throughput lookups and benchmarking.
+   * Used for high-throughput lookups.
    */
   findNode(id) {
     id = Number(id);
@@ -268,22 +268,6 @@ export class AVLTree {
       }
     }
 
-    return null;
-  }
-
-  /**
-   * Pure pointer search (O(log n)) without diagnostic allocations (path/toItem).
-   * Used for high-throughput lookups and benchmarking.
-   */
-  findNode(id) {
-    id = Number(id);
-    if (isNaN(id)) return null;
-    let current = this.root;
-    while (current !== null) {
-      if (id === current.id) return current;
-      if (id < current.id) current = current.left;
-      else current = current.right;
-    }
     return null;
   }
 

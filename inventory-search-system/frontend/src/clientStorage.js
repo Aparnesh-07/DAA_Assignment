@@ -1,39 +1,13 @@
 import { AVLTree } from './avlTree.js';
-import { runClientBenchmark } from './benchmark.js';
-
-/**
- * Micro-benchmarks an operation across repeated iterations to bypass
- * browser clock quantization and measure the true hardware execution latency.
- */
-function benchmarkOperation(fn, iterations = 2000) {
-  // Warm up JIT compiler
-  const warmup = Math.min(20, Math.max(2, Math.floor(iterations / 20)));
-  for (let i = 0; i < warmup; i++) fn();
-
-  const start = performance.now();
-  for (let i = 0; i < iterations; i++) fn();
-  const totalMs = performance.now() - start;
-  const avgMs = totalMs / iterations;
-  const avgUs = avgMs * 1000;
-  const avgNs = avgMs * 1e6;
-
-  return {
-    avgMs: Number(avgMs.toFixed(6)),
-    avgUs: Number(avgUs.toFixed(3)),
-    avgNs: Number(avgNs.toFixed(1)),
-    iterations
-  };
-}
 
 /**
  * Client-Side In-Memory Inventory Manager
- * Ensures the app functions 100% reliably with real timers and full-dataset preview
+ * Synchronizes AVL Tree and Hash Map for offline operation
  */
 class ClientInventoryManager {
   constructor() {
     this.avlTree = new AVLTree();
     this.inventoryMap = new Map();
-    this.itemsArray = [];
     this.seedInitialData();
   }
 
@@ -53,12 +27,10 @@ class ClientInventoryManager {
 
     this.avlTree = new AVLTree();
     this.inventoryMap.clear();
-    this.itemsArray = [];
 
     sampleItems.forEach(item => {
       this.avlTree.insert(item);
       this.inventoryMap.set(item.id, { ...item });
-      this.itemsArray.push({ ...item });
     });
   }
 
@@ -70,64 +42,39 @@ class ClientInventoryManager {
     return this.avlTree.rangeSearch(minId, maxId);
   }
 
-  runBenchmark(config) {
-    return runClientBenchmark(config);
-  }
-
   search(id) {
     const numId = Number(id);
 
     // 1. AVL Tree Search (counts comparisons along tree path)
+    const avlStart = performance.now();
     const avlResult = this.avlTree.search(numId);
+    const avlTimeMs = Number((performance.now() - avlStart).toFixed(4));
 
     // 2. Hash Map Direct Lookup
+    const mapStart = performance.now();
     const mapFound = this.inventoryMap.has(numId);
     const mapItem = mapFound ? this.inventoryMap.get(numId) : null;
-
-    // 3. Pure linear search on actual maintained array
-    const totalCount = this.itemsArray.length;
-    const linearIdx = this.itemsArray.findIndex(i => i.id === numId);
-    const linearComparisons = linearIdx !== -1 ? linearIdx + 1 : totalCount;
-
-    // 4. Accurate iterative hardware micro-benchmarks (pure lookup operations, zero allocation noise)
-    const mapBench = benchmarkOperation(() => this.inventoryMap.get(numId), 5000);
-    const avlBench = benchmarkOperation(() => this.avlTree.findNode(numId), 5000);
-    const linIters = totalCount > 500 ? 500 : 2000;
-    const linBench = benchmarkOperation(() => this.itemsArray.findIndex(i => i.id === numId), linIters);
+    const mapTimeMs = Number((performance.now() - mapStart).toFixed(4));
 
     return {
       id: numId,
       found: avlResult.found,
       item: avlResult.item,
-      totalItemsInSystem: totalCount,
+      totalItemsInSystem: this.inventoryMap.size,
       avl: {
         comparisons: avlResult.comparisons,
         path: avlResult.path,
         nodeHeight: avlResult.nodeHeight,
         balanceFactor: avlResult.balanceFactor,
         timeComplexity: 'O(log n)',
-        timeTakenMs: avlBench.avgMs,
-        timeTakenUs: avlBench.avgUs,
-        timeTakenNs: avlBench.avgNs,
-        iterations: avlBench.iterations
-      },
-      linearSearch: {
-        comparisons: linearComparisons,
-        timeComplexity: 'O(n)',
-        timeTakenMs: linBench.avgMs,
-        timeTakenUs: linBench.avgUs,
-        timeTakenNs: linBench.avgNs,
-        iterations: linBench.iterations
+        timeTakenMs: avlTimeMs
       },
       hashMap: {
         found: mapFound,
         item: mapItem,
         lookupOperations: 1,
         timeComplexity: 'O(1) average',
-        timeTakenMs: mapBench.avgMs,
-        timeTakenUs: mapBench.avgUs,
-        timeTakenNs: mapBench.avgNs,
-        iterations: mapBench.iterations
+        timeTakenMs: mapTimeMs
       }
     };
   }
@@ -162,20 +109,12 @@ class ClientInventoryManager {
     this.inventoryMap.set(id, { ...newItem });
     const mapTimeMs = Number((performance.now() - mapStart).toFixed(4));
 
-    this.itemsArray.push({ ...newItem });
-
-    const avlTimeUs = Number((avlTimeMs * 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeMs * 1000).toFixed(2));
-
     return {
       ...newItem,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
@@ -209,23 +148,12 @@ class ClientInventoryManager {
     this.inventoryMap.set(numId, updatedItem);
     const mapTimeMs = Number((performance.now() - mapStart).toFixed(4));
 
-    const idx = this.itemsArray.findIndex(i => i.id === numId);
-    if (idx !== -1) {
-      this.itemsArray[idx] = { ...updatedItem };
-    }
-
-    const avlTimeUs = Number((avlTimeMs * 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeMs * 1000).toFixed(2));
-
     return {
       ...updatedItem,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
@@ -244,23 +172,12 @@ class ClientInventoryManager {
     this.inventoryMap.delete(numId);
     const mapTimeMs = Number((performance.now() - mapStart).toFixed(4));
 
-    const idx = this.itemsArray.findIndex(i => i.id === numId);
-    if (idx !== -1) {
-      this.itemsArray.splice(idx, 1);
-    }
-
-    const avlTimeUs = Number((avlTimeMs * 1000).toFixed(2));
-    const mapTimeUs = Number((mapTimeMs * 1000).toFixed(2));
-
     return {
       ...itemToDelete,
       timing: {
         avlTimeMs,
         mapTimeMs,
-        avlTimeUs,
-        mapTimeUs,
-        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4)),
-        totalTimeUs: Number((avlTimeUs + mapTimeUs).toFixed(2))
+        totalTimeMs: Number((avlTimeMs + mapTimeMs).toFixed(4))
       }
     };
   }
@@ -273,7 +190,6 @@ class ClientInventoryManager {
 
     this.avlTree = new AVLTree();
     this.inventoryMap.clear();
-    this.itemsArray = [];
 
     const ids = [];
     for (let i = 1; i <= count; i++) {
@@ -300,7 +216,6 @@ class ClientInventoryManager {
 
       this.avlTree.insert(item);
       this.inventoryMap.set(id, { ...item });
-      this.itemsArray.push({ ...item });
     });
 
     const timeTakenMs = Number((performance.now() - startTime).toFixed(2));
